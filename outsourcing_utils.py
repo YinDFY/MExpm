@@ -8,7 +8,7 @@ gmpy2.get_context().precision = 2048
 
 def calculate_average(numbers):
     if not numbers:
-        return 0  # 避免除以零错误
+        return 0  # avoid divide zero
 
     total = sum(numbers)
     average = total / len(numbers)
@@ -92,7 +92,7 @@ def generate_large_prime(bit):
     return gmpy2.mpz(prime_candidate)
 
 def generate_p_q(bit):
-    q = generate_large_prime(bit)  # 生成 512 位的素数 q
+    q = generate_large_prime(bit)  # produce bit-bit prime q
     i = gmpy2.mpz(2)
     while True:
         p_candidate = gmpy2.mul(q, i) + 1  # p = 2q + 1
