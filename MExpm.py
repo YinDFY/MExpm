@@ -2,127 +2,151 @@ from gmpy2 import *
 from outsourcing_utils import *
 import random
 from Crypto.Util.number import getPrime
-
+import time
 get_context().precision = 2048
 
-def MExpm(u_list,a_list,p,N,table_alpha,table_beta,g1):
+
+def MExpm(u_list,a_list,L,q,N,t,table_alpha,table_beta,g1):
     blinding_pairs = []
     w = []
     w_ = []
-    Aux = []
-    L = mpz(mul(p, N))
-
+    # keyGen
+    start_time = time.time()
     for i in range(4):
         g, x, X = RandN(g1, L, mul(p - 1, N - 1), True, table_beta, table_alpha)
         blinding_pairs.append([x, X])
 
-    v1_inverse = invert(blinding_pairs[0][1], L)
-    v2_inverse = invert(blinding_pairs[1][1], L)
+    v1_inverse = invert(blinding_pairs[0][1], L)  # 1mi
+    v2_inverse = invert(blinding_pairs[1][1], L)  # 1mi
+
     gtask = mpz(g)
     gveriy = mpz(g)
     a_sum = mpz(0)
-
+    elur = mpz(mul(p - 1, N - 1))  # 1mm
     r = mpz(random.randint(2, N))
-    Aux.append(f_mod(mul(r, blinding_pairs[2][1]), L))
-    Aux.append(blinding_pairs[3][1])
-
+    qu = generate_a(elur, 2)
     i = 0
-    moudular_elur = mpz(mul(p - 1, N - 1))
-    for u in u_list:
-        wx = f_mod(mul(u, v1_inverse), L)
-        w.append(wx)
-        gtask = f_mod(mul(gtask, wx), L)
-        a_sum = f_mod(add(a_sum, a_list[i]), moudular_elur)
 
-        y = u
-        wy = f_mod(mul(y, v2_inverse), L)
+    m_index = random.randint(1, len(u_list) - 1)
+    d = invert(a_list[m_index], elur)  # 1mi
+    rd = powmod(r, d, L)  # 1exp
+
+    for u in u_list:
+        wx = f_mod(mul(u, v1_inverse), L)  # nmm
+        w.append(wx)
+        gtask = f_mod(mul(gtask, wx), L)  # nmm
+        a_sum = f_mod(add(a_sum, a_list[i]), elur)
+        if i == m_index:
+            u = f_mod(mul(u, rd), L)  # 1mm
+        wy = f_mod(mul(u, v2_inverse), L)  # nmm
         w_.append(wy)
-        gveriy = f_mod(mul(gveriy, wy), L)
+        gveriy = f_mod(mul(gveriy, wy), L)  # nmm
         i = i + 1
 
-    k1a_sum = f_mod(mul(blinding_pairs[0][0], a_sum), moudular_elur)
-    t1z1 = f_mod(sub(k1a_sum, blinding_pairs[2][0]), moudular_elur)
+    k1a_sum = f_mod(mul(blinding_pairs[0][0], a_sum), elur)  # 1mm
+    t1z1 = f_mod(sub(k1a_sum, blinding_pairs[2][0]), elur)
+    t1 = qu[0]
+    z1 = f_mod(mul(t1z1, invert(t1, elur)), elur)  # 1mm+1minv
 
-    k2a_sum = f_mod(mul(blinding_pairs[1][0], a_sum), moudular_elur)
-    t2z2 = f_mod(sub(k2a_sum, blinding_pairs[3][0]), moudular_elur)
+    k2a_sum = f_mod(mul(blinding_pairs[1][0], a_sum), elur)  # 1mm
+    t2z2 = f_mod(sub(k2a_sum, blinding_pairs[3][0]), elur)
+    t2 = qu[0]
+    z2 = f_mod(mul(t2z2, invert(t2, elur)), elur)  # 1mm+1minv
 
     m = []
     m_ = []
-    qu = generate_a(moudular_elur, 2)
     for a in a_list:
-        mx = f_mod(sub(a, t1z1), moudular_elur)
-        m.append(f_mod(mul(mx, invert(qu[0], moudular_elur)), moudular_elur))
+        mx = f_mod(sub(a, t1z1), elur)
+        m.append(mx)
+        # m.append(mx)
 
-        my = f_mod(sub(a, t2z2), moudular_elur)
-        m_.append(f_mod(mul(my, invert(qu[1], moudular_elur)), moudular_elur))
+        my = f_mod(sub(a, t2z2), elur)
+        m_.append(my)
+        # m_.append(my)
+    TK = f_mod(mul(blinding_pairs[2][1], r), L)  # 1mm
+    end_time = time.time()
+    keygen_time = (end_time - start_time) * 1000
+    """
+    Compute
+    """
+    start_time = time.time()
+
+    mid_TK = powmod(gtask, z1, L)
+    mid_VK = powmod(gveriy, z2, L)
 
     ans_x = []
     ans_y = []
-
-    TK = blinding_pairs[2][1]
-    VK = blinding_pairs[3][1]
-
-    mid_TK = powmod(gtask, t1z1, L)
-
-    mid_VK = powmod(gveriy, t2z2, L)
-
     for j in range(len(w)):
         ans_x.append(powmod(w[j], m[j], L))
         ans_y.append(powmod(w_[j], m_[j], L))
-
+    end_time = time.time()
+    compute_time = (end_time - start_time) * 1000
+    """
+    Verify
+    """
+    start_time = time.time()
+    VK = blinding_pairs[3][1]
     prod_x = mpz(1)
     prod_y = mpz(1)
     for j in range(len(w)):
         prod_x = f_mod(mul(prod_x, ans_x[j]), L)
         prod_y = f_mod(mul(prod_y, ans_y[j]), L)
-    prod_x = powmod(prod_x, qu[0], L)
-    prod_y = powmod(prod_y, qu[1], L)
+    mid_TK = powmod(mid_TK, t1, L)
+    mid_VK = powmod(mid_VK, t2, L)
 
-    TK = f_mod(mul(TK, prod_x), L)
-    VK = f_mod(mul(VK, prod_y), L)
+    prod_x = f_mod(mul(mid_TK, prod_x), L)
+    prod_x = f_mod(mul(TK, prod_x), L)
 
-    TK = f_mod(mul(TK, mid_TK), L)
-    VK = f_mod(mul(VK, mid_VK), L)
+    prod_y = f_mod(mul(mid_VK, prod_y), L)
+    prod_y = f_mod(mul(VK, prod_y), L)
+    end_time = time.time()
+    verify_time = (end_time - start_time) * 1000
 
-    return TK, VK, r
-
+    return prod_x, prod_y, r#, keygen_time, compute_time, verify_time
 if __name__ == "__main__":
+
     bitlong1 = 512
     bitlong2 = 1024
-    number = 1001 #batch size
-
-    #MExpm
-    print("|-----------------------------------MExpm-----------------------------------|")
+    number = 1000
+    start_time = time.time()
     p = getPrime(bitlong1)
     N = getPrime(bitlong1)
-    L = gmpy2.mpz(gmpy2.mul(p, N))  #L is  bitlong2
-    u1 = generate_u(N, number)
-    g1 = mpz(random.randint(2, L))
+    L = mul(p, N)
+    u1 = generate_u(L, number)
+    a1 = generate_a(gmpy2.mul(p - 1, N - 1), number)
+    g1 = mpz(random.randint(2, L - 1))
     table_alpha, table_beta = RandN(g1, L, mul(p - 1, N - 1), False)
 
-    k = mpz(random.randint(2, N))
+    end_time2 = time.time()
+    k = mpz(random.randint(2, p))
     kN = mpz(mul(k, N))
 
     y = []
-
+    a = []
     for u in u1:
         y1 = f_mod(add(u, kN), L)
         y.append(y1)
-    a = generate_a(gmpy2.mul(p - 1, N - 1), number)
-    TK, VK, r = MExpm(y, a, p, N, table_alpha, table_beta, g1)
 
-    #compute real answer
-    real_answer = mpz(1)
-    for i in range(number):
-        temp = powmod(u1[i], a[i], N)
-        real_answer = f_mod(mul(real_answer, temp), N)
+    for tmp in a1:
+        a.append(tmp)
+    end_time = time.time()
+    TK, VK, r = MExpm(y, a, L, p, N, N, table_alpha, table_beta, g1)
 
-    recovery_answer = f_mod(TK, N)
     if TK == VK:
         print("Verification is passed")
-    if recovery_answer == real_answer:
-        print("Real answer is true")
 
+    start_time = time.perf_counter()
+    r_inverse = invert(r, L)  # 1minv
+    TK = f_mod(mul(TK, r_inverse), L)  # 1mm
+
+    #compute real answer using direct exp operations
+    real_answer = mpz(1)
+    for base,exponent in zip(u1,a):
+        tmp = powmod(base,exponent,N)
+        real_answer = f_mod(mul(real_answer,tmp),N)
+
+    if real_answer == f_mod(TK,N):
+        print("Real answer is true")
 
 
     #Exp  Exp operations in numbers
