@@ -14,26 +14,35 @@ def calculate_average(numbers):
     average = total / len(numbers)
     return average
 
+def find_generator(L, phi_L):
+    while True:
+        g = gmpy2.mpz_random(gmpy2.random_state(), L - 1) + 1  # 1 <= g < L
+        if gmpy2.gcd(g, L) != 1:
+            continue  # Ensure g is coprime with L
+        if gmpy2.powmod(g, phi_L, L) == 1:
+            return g
+
 def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 64,h = 64):
     """
-    :param p: a large prime number
-    :param M: a large number
+    :param p: p = L*N 是两个大素数的乘法
+    :param M: 是(L - 1)*(N - 1)是p的欧拉函数
     :param n: integer
     :param h: integer  h>=1
-    :return: pair(x,X), where g^x = X mod p
+    :return: pair(x,X), where g^x = X mod p 要求X是模p阶为M的乘法群元素
     """
-    times = gmpy2.mpz(gmpy2.div(p - 1, M))
-    g = gmpy2.powmod(g1, times, p)
+    #times = gmpy2.divexact(p - 1, M)
+    g = g1
+
     #transform data into big number library form
     p = gmpy2.mpz(p)
     M = gmpy2.mpz(M)
-    k = 1
+    k = gmpy2.mpz(1)
     h = gmpy2.mpz(h)
     n = gmpy2.mpz(n)
     #times = gmpy2.mpz(gmpy2.div(p-1,M))
     if flag == False:
         for i in range(n):
-            alpha = gmpy2.mpz(random.randint(0,M-1))
+            alpha = generate_u(M,1)[0]
             beta = gmpy2.powmod(g, alpha, p)
             table_alpha.append(alpha)
             table_beta.append(beta)
@@ -42,15 +51,24 @@ def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 64,h = 64):
         #Pair Generation
         x = gmpy2.mpz(0)
         X = gmpy2.mpz(1)
+        i = 0
 
-        s = random.randint(0,n-1)
-        xj = gmpy2.mpz(random.randint(1,h-1))
-        x = gmpy2.add(x,gmpy2.mul(table_alpha[s],xj))
-        x = gmpy2.f_mod(x,M)
+        while i < k:
+           s = random.randint(0,n-1)
+           xj = generate_a(M,1)[0]
+           xt = gmpy2.add(x, gmpy2.mul(table_alpha[s], xj))
+           x = xt
+           x = gmpy2.f_mod(x,M)
+           X = gmpy2.mul(X,gmpy2.powmod(table_beta[s],xj,p))
+           X = gmpy2.f_mod(X, p)
+           i = i + 1
+           if gmpy2.f_mod(x,M) == 0:
+                x = gmpy2.mpz(0)
+                X = gmpy2.mpz(1)
+                i = 0
 
-        X = gmpy2.mul(X,gmpy2.powmod(table_beta[s],xj,p))
-        X = gmpy2.f_mod(X, p)
-        i = i + 1
+        x = generate_a(M,1)[0]
+        X = gmpy2.powmod(g,x,p)
 
         x = gmpy2.f_mod(x,M)
         X = gmpy2.f_mod(X,p)
