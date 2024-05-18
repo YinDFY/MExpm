@@ -14,7 +14,7 @@ def calculate_average(numbers):
     average = total / len(numbers)
     return average
 
-def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 64,h = 64):
+def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 1,h = 1):
     """
     :param p: a large prime number
     :param M: a large number
