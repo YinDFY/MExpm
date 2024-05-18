@@ -14,7 +14,7 @@ def calculate_average(numbers):
     average = total / len(numbers)
     return average
 
-def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 1,h = 1):
+def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 64,h = 64):
     """
     :param p: a large prime number
     :param M: a large number
@@ -27,7 +27,7 @@ def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 1,h = 1):
     #transform data into big number library form
     p = gmpy2.mpz(p)
     M = gmpy2.mpz(M)
-    k = gmpy2.mpz(random.randint(1,n))
+    k = 1
     h = gmpy2.mpz(h)
     n = gmpy2.mpz(n)
     #times = gmpy2.mpz(gmpy2.div(p-1,M))
@@ -42,20 +42,15 @@ def RandN(g1,p ,M ,flag = False,table_beta = [],table_alpha = [],n = 1,h = 1):
         #Pair Generation
         x = gmpy2.mpz(0)
         X = gmpy2.mpz(1)
-        i = 0
-        while i < k:
-           s = random.randint(0,n-1)
-           xj = gmpy2.mpz(random.randint(1,h-1))
-           x = gmpy2.add(x,gmpy2.mul(table_alpha[s],xj))
-           x = gmpy2.f_mod(x,M)
 
-           X = gmpy2.mul(X,gmpy2.powmod(table_beta[s],xj,p))
-           X = gmpy2.f_mod(X, p)
-           i = i + 1
-           if gmpy2.f_mod(x,M) == 0:
-                x = gmpy2.mpz(0)
-                X = gmpy2.mpz(1)
-                i = 0
+        s = random.randint(0,n-1)
+        xj = gmpy2.mpz(random.randint(1,h-1))
+        x = gmpy2.add(x,gmpy2.mul(table_alpha[s],xj))
+        x = gmpy2.f_mod(x,M)
+
+        X = gmpy2.mul(X,gmpy2.powmod(table_beta[s],xj,p))
+        X = gmpy2.f_mod(X, p)
+        i = i + 1
 
         x = gmpy2.f_mod(x,M)
         X = gmpy2.f_mod(X,p)
